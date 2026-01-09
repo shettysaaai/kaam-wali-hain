@@ -1,0 +1,53 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // USERS COLLECTION
+    match /users/{userId} {
+      allow read: if request.auth.uid == userId;
+      allow create: if request.auth.uid == userId && request.resource.data.uid == userId;
+      allow update: if request.auth.uid == userId;
+      allow delete: if false; // Prevent deletion
+    }
+
+    // BAI PROFILES COLLECTION
+    match /bai_profiles/{baiId} {
+      allow read: if true; // Public read (for searching)
+      allow create: if request.auth.uid != null && request.resource.data.user_id == request.auth.uid;
+      allow update: if request.auth.uid == resource.data.user_id;
+      allow delete: if false;
+    }
+
+    // JOBS COLLECTION
+    match /jobs/{jobId} {
+      allow read: if request.auth.uid != null;
+      allow create: if request.auth.uid != null && request.resource.data.client_id == request.auth.uid;
+      allow update: if request.auth.uid == resource.data.client_id || request.auth.uid == resource.data.bai_id;
+      allow delete: if request.auth.uid == resource.data.client_id;
+    }
+
+    // MESSAGES COLLECTION
+    match /messages/{roomId}/{document=**} {
+      allow read: if request.auth.uid != null && 
+        (request.auth.uid == resource.data.sender_id || request.auth.uid == resource.data.receiver_id);
+      allow create: if request.auth.uid != null && request.resource.data.sender_id == request.auth.uid;
+      allow update: if request.auth.uid == resource.data.sender_id;
+      allow delete: if false;
+    }
+
+    // RATINGS COLLECTION
+    match /ratings/{ratingId} {
+      allow read: if true;
+      allow create: if request.auth.uid != null;
+      allow update: if request.auth.uid == resource.data.reviewer_id;
+      allow delete: if false;
+    }
+
+    // REPORTS/DISPUTES COLLECTION
+    match /reports/{reportId} {
+      allow read: if request.auth.uid == resource.data.reporter_id;
+      allow create: if request.auth.uid != null && request.resource.data.reporter_id == request.auth.uid;
+      allow update: if false; // Only admin can update
+      allow delete: if false;
+    }
+  }
+}
